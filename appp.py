@@ -2,43 +2,86 @@ import streamlit as st
 import pandas as pd
 import pickle
 
-st.set_page_config(page_title="Heart Disease Prediction")
+# Page Configuration
+st.set_page_config(
+    page_title="Heart Disease Prediction",
+    page_icon="❤️",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 
-st.title('Heart Disease Prediction')
+# Custom CSS for Styling
+st.markdown(
+    """
+    <style>
+    body {
+        background-color: #f7f7f7;
+    }
+    .main-title {
+        font-size: 2.5em;
+        font-weight: 700;
+        text-align: center;
+        color: #dc3545;
+    }
+    .sub-title {
+        font-size: 1.2em;
+        text-align: center;
+        color: #333;
+        margin-bottom: 40px;
+    }
+    .result {
+        font-size: 1.5em;
+        font-weight: bold;
+        text-align: center;
+        margin-top: 30px;
+        padding: 15px;
+        border-radius: 10px;
+    }
+    .positive {
+        background-color: #f8d7da;
+        color: #721c24;
+    }
+    .negative {
+        background-color: #d4edda;
+        color: #155724;
+    }
+    .footer {
+        margin-top: 50px;
+        text-align: center;
+        color: #555;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-st.write("This model attempts to predict whether or not someone has heart disease using the XGB CLASSIFIER.\n\nThe model was trained with 100 percent accuracy\n\nPlease note that this should not be used as a medical diagnosis, rather just a tool to help. Please consult your local medical professional if you have any health concerns.",width=500)
-st.markdown("please enter the information below")
+# Title Section
+st.markdown('<div class="main-title">Heart Disease Prediction</div>', unsafe_allow_html=True)
+st.markdown(
+    '<div class="sub-title">Enter the details below to check for potential signs of heart disease. This tool uses a Random Forest Classifier for prediction.</div>',
+    unsafe_allow_html=True,
+)
 
+# Load the model
+pred = pickle.load(open('rf.pkl', 'rb'))
 
-pred = pickle.load(open('rf.pkl','rb'))
-
-
+# Input Section
 def user_input_features():
-    age = st.slider('Enter your age: ', value=25, min_value=1, max_value=100)
-
-    sex = st.selectbox('Sex:  [0 - MALE | 1 - FEMALE)', [0, 1])
-
-    cp = st.selectbox('Chest pain type', [0, 1, 2, 3])
-
-    tres = st.slider('Resting blood pressure: ', value=120, min_value=0, max_value=300)
-
-    chol = st.slider('Serum cholestoral in mg/dl: ', value=200, min_value=0, max_value=600)
-
-    fbs = st.selectbox('Fasting blood sugar:  [0 - NO | 1 - YES)', [0, 1])
-
-    res = st.slider('Resting electrocardiographic results: ', value=0, min_value=0, max_value=2)
-
-    tha = st.slider('Maximum heart rate achieved: ', value=150, min_value=0, max_value=300)
-
-    exa = st.selectbox('Exercise induced angina:  [0 - NO | 1 - YES)', [0, 1])
-
-    old = st.slider('Oldpeak: ', value=1.0, min_value=0.0, max_value=10.0, step=0.1)
-
-    slope = st.slider('Slope of the peak exercise ST segment: ', value=1, min_value=0, max_value=2)
-
-    ca = st.selectbox('Number of major vessels', [0, 1, 2, 3])
-
-    thal = st.selectbox('Thal', [0, 1, 2])
+    with st.sidebar:
+        st.header("Input Your Details:")
+        age = st.number_input('Age:', value=25, min_value=1, max_value=100)
+        sex = st.radio('Sex:', [0, 1], format_func=lambda x: "Male" if x == 0 else "Female")
+        cp = st.selectbox('Chest Pain Type:', [0, 1, 2, 3])
+        tres = st.number_input('Resting Blood Pressure:', value=120, min_value=0, max_value=300)
+        chol = st.number_input('Serum Cholesterol (mg/dl):', value=200, min_value=0, max_value=600)
+        fbs = st.radio('Fasting Blood Sugar > 120 mg/dl:', [0, 1], format_func=lambda x: "No" if x == 0 else "Yes")
+        res = st.selectbox('Resting ECG Results:', [0, 1, 2])
+        tha = st.number_input('Max Heart Rate Achieved:', value=150, min_value=0, max_value=300)
+        exa = st.radio('Exercise-Induced Angina:', [0, 1], format_func=lambda x: "No" if x == 0 else "Yes")
+        old = st.slider('ST Depression (Oldpeak):', 0.0, 10.0, 1.0, step=0.1)
+        slope = st.selectbox('Slope of ST Segment:', [0, 1, 2])
+        ca = st.selectbox('Number of Major Vessels:', [0, 1, 2, 3])
+        thal = st.selectbox('Thalassemia:', [1, 2, 3])
 
     data = {
         'age': age,
@@ -53,39 +96,43 @@ def user_input_features():
         'oldpeak': old,
         'slope': slope,
         'ca': ca,
-        'thal': thal
+        'thal': thal,
     }
     input_df = pd.DataFrame(data, index=[0])
     return input_df
 
-# Get user input
+# Get User Input
 input_df = user_input_features()
 
-# Load dataset
+# Load Dataset for Dummy Columns
 dataset = pd.read_csv('heart_data.csv')
 dataset = dataset.drop(columns=['target'])
 
+# Prepare DataFrame
 df = pd.concat([input_df, dataset], axis=0)
-
-# Perform one-hot encoding
 df = pd.get_dummies(df, columns=['sex', 'cp', 'fbs', 'restecg', 'exang', 'slope', 'ca', 'thal'])
+df = df[:1]  # Use only user data for prediction
 
-df = df[:1]
-
-# Create a button to trigger prediction
-if st.button('Predict'):
-
+# Predict Button
+if st.button('Predict ❤️'):
     prediction = pred.predict(df)
 
     if prediction[0] == 1:
-
-        st.write('Positive for Heart Disease')
-        
+        st.markdown(
+            '<div class="result positive">Positive for Heart Disease 🚨</div>',
+            unsafe_allow_html=True,
+        )
+        st.write(
+            "⚠️ It's strongly recommended to consult a cardiologist for further evaluation and appropriate medical advice."
+        )
     else:
-        st.write('Negative for Heart Disease')
+        st.markdown(
+            '<div class="result negative">Negative for Heart Disease ✅</div>',
+            unsafe_allow_html=True,
+        )
+        st.write(
+            "✨ Great! Maintain a healthy lifestyle to keep your heart in good shape. Regular check-ups are still important."
+        )
 
-st.sidebar.markdown("Dataset Features\n\n\nYou can view the entire Jupyter Notebook on Github (click the three bars on the top right of your screen and select 'View app source')\n\nage - Patient age.\n\nsex - Patient sex assigned at birth. (1 = male, 0 = female).\n\ncp - Chest pain type. (0 = typical angina, 1 = atypical angina, 2 = non—anginal pain, 3 = asymptotic).\n\ntrestbps - Resting blood pressure (mmHg).\n\nchol - Serum Cholesterol level (mg/dl).\n\nfbs - Fasting Blood Sugar level (mg/dl). (1 = fasting blood sugar is more than 120mg/dl, 0 = other).\n\nrestecg - Resting ElectroCardioGraphic results (0 = normal, 1 = ST-T wave abnormality, 2 = left ventricular hyperthrophy).\n\nthalach - Max heart rate achieved.\n\nexang - Exercise induced angina (1 = yes, 0 = no).\n\noldpeak - ST depression induced by exercise relative to rest.\n\nslope - Peak exercise ST segment (0 = upsloping, 1 = flat, 2 = downsloping).\n\nca - Number of major vessels (0–3) colored by flourosopy.\n\nthal - Thalassemia (0 = normal, 1 = fixed defect, 2 = reversible defect).\n\ntarget - Heart disease prediction (0 = absence, 1 = present)")
-
-
-st.markdown("A PROJECT BY - M.MANOJ BHASKAR")
-
+# Footer
+st.markdown('<div class="footer">A PROJECT BY - M. MANOJ BHASKAR</div>', unsafe_allow_html=True)
